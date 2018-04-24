@@ -19,7 +19,6 @@ typedef struct {
 } ngx_http_static_etags_loc_conf_t;
 
 static ngx_http_output_header_filter_pt  ngx_http_next_header_filter;
-/*static ngx_http_output_body_filter_pt    ngx_http_next_body_filter;*/
 
 static void * ngx_http_static_etags_create_loc_conf(ngx_conf_t *cf);
 static char * ngx_http_static_etags_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
@@ -32,13 +31,6 @@ static ngx_command_t  ngx_http_static_etags_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof( ngx_http_static_etags_loc_conf_t, FileETag ),
-      NULL },
-
-    { ngx_string( "etag_format" ),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof( ngx_http_static_etags_loc_conf_t, etag_format ),
       NULL },
 
       ngx_null_command
@@ -90,8 +82,7 @@ static char * ngx_http_static_etags_merge_loc_conf(ngx_conf_t *cf, void *parent,
     ngx_http_static_etags_loc_conf_t *conf = child;
 
     ngx_conf_merge_uint_value( conf->FileETag, prev->FileETag, 0 );
-    ngx_conf_merge_str_value(  conf->etag_format, prev->etag_format, "%s_%X_%X" );
-
+    
     if ( conf->FileETag != 0 && conf->FileETag != 1 ) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, 
             "FileETag must be 'on' or 'off'");
@@ -130,28 +121,16 @@ static ngx_int_t ngx_http_static_etags_header_filter(ngx_http_request_t *r) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
 
-
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-                        "http filename: \"%s\"", path.data);
-    
         status = stat( (char *) path.data, &stat_result );
     
         // Did the `stat` succeed?
         if ( 0 == status) {
             str_len    = 1000;
             str_buffer = malloc( str_len + sizeof(char) );
-            sprintf( str_buffer, (char *) loc_conf->etag_format.data, r->uri.data, (unsigned int) stat_result.st_size, (unsigned int) stat_result.st_mtime );
+            unsigned long long int mtime_seconds_part = (unsigned long long int)stat_result.st_mtim.tv_sec*1000000;
+            unsigned long long int mtime_nanosec_part = (unsigned long long int)stat_result.st_mtim.tv_nsec/1000;
+            sprintf( str_buffer, "\"%llx-%llx\"", (unsigned long long int) stat_result.st_size, mtime_seconds_part + mtime_nanosec_part );
             
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-                            "stat returned: \"%d\"", status);
-    
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-                         "st_size: '%d'", stat_result.st_size);
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-                         "st_mtime: '%d'", stat_result.st_mtime);
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0,
-                         "Concatted: '%s'", str_buffer );
-                    
             r->headers_out.etag = ngx_list_push(&r->headers_out.headers);
             if (r->headers_out.etag == NULL) {
                 return NGX_ERROR;
