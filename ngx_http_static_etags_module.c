@@ -135,7 +135,7 @@ static ngx_int_t ngx_http_static_etags_header_filter(ngx_http_request_t *r) {
             if (r->headers_out.etag == NULL) {
                 if (str_buffer) {
                     free(str_buffer);
-                    str_buffer = NULL:
+                    str_buffer = NULL;
                 }
                 return NGX_ERROR;
             }
@@ -147,7 +147,7 @@ static ngx_int_t ngx_http_static_etags_header_filter(ngx_http_request_t *r) {
             
             if (str_buffer) {
                 free(str_buffer);
-                str_buffer = NULL:
+                str_buffer = NULL;
             }
         }
     }
