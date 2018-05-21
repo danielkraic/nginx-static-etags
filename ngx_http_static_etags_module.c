@@ -126,13 +126,17 @@ static ngx_int_t ngx_http_static_etags_header_filter(ngx_http_request_t *r) {
         // Did the `stat` succeed?
         if ( 0 == status) {
             str_len    = 1000;
-            str_buffer = malloc( str_len + sizeof(char) );
+            str_buffer = (char *)malloc( str_len + sizeof(char) );
             unsigned long long int mtime_seconds_part = (unsigned long long int)stat_result.st_mtim.tv_sec*1000000;
             unsigned long long int mtime_nanosec_part = (unsigned long long int)stat_result.st_mtim.tv_nsec/1000;
             sprintf( str_buffer, "\"%llx-%llx\"", (unsigned long long int) stat_result.st_size, mtime_seconds_part + mtime_nanosec_part );
             
             r->headers_out.etag = ngx_list_push(&r->headers_out.headers);
             if (r->headers_out.etag == NULL) {
+                if (str_buffer) {
+                    (str_buffer);
+                    str_buffer = NULL:
+                }
                 return NGX_ERROR;
             }
             r->headers_out.etag->hash = 1;
@@ -140,6 +144,11 @@ static ngx_int_t ngx_http_static_etags_header_filter(ngx_http_request_t *r) {
             r->headers_out.etag->key.data = (u_char *) "Etag";
             r->headers_out.etag->value.len = strlen( str_buffer );
             r->headers_out.etag->value.data = (u_char *) str_buffer;
+            
+            if (str_buffer) {
+                free(str_buffer);
+                str_buffer = NULL:
+            }
         }
     }
 
