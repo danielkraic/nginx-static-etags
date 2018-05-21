@@ -134,7 +134,7 @@ static ngx_int_t ngx_http_static_etags_header_filter(ngx_http_request_t *r) {
             r->headers_out.etag = ngx_list_push(&r->headers_out.headers);
             if (r->headers_out.etag == NULL) {
                 if (str_buffer) {
-                    (str_buffer);
+                    free(str_buffer);
                     str_buffer = NULL:
                 }
                 return NGX_ERROR;
